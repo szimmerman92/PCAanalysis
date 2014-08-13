@@ -3,19 +3,17 @@ from matplotlib.mlab import PCA
 import numpy.linalg as LA
 import math
 
+#put the data in the correct format for PCA analysis. 
 def getList(files, version):
     f = open("/home/ichproject/Expression_Profiles2/"+files,'rU')
     myList = []
 
-#    totalPerc = []
-#    counter = 0
-    if "Perc" in version:
+    if "Perc" in version: #if we look at the expression data in terms of percentages
         totalPerc = []
         counter = 0
         for line in f:
             line = line.split()
-            #fline = [float(x) for x in line[1:]] #for not transposed data
-            fline = [float(x) for x in line] # for transposed data
+            fline = [float(x) for x in line[1:]] #for not transposed data
             for h in range(len(fline)):
                 if counter == 0:
                     if "Log" in version:
@@ -23,19 +21,17 @@ def getList(files, version):
                     else:
                         totalPerc.append(fline[h])
                 else:
-                    if "Log" in version:
+                    if "Log" in version: #if logging all expression data
                         totalPerc[h] = totalPerc[h] + math.log(fline[h])
                     else:
                         totalPerc[h] = totalPerc[h] + fline[h]
             counter = counter + 1
-        #print totalPerc, "percentages"
         f.seek(0,0)
 
     for line in f:
         hourList = []
         line = line.split()
-#        fline = [float(x) for x in line[1:]]  #for not transposed data
-        fline = [float(x) for x in line] #this is when data is transposed
+        fline = [float(x) for x in line[1:]]  #for not transposed data
         if "raw" in version:
             for hour in range(len(fline)):
                 if version == "raw":
@@ -47,7 +43,7 @@ def getList(files, version):
                 if version == "rawLog":
                     hourList.append(math.log(fline[hour]))
 
-        if "diff" in version:
+        if "diff" in version: #if taking the difference between time intervals
             for hour in range(len(fline)-1):
                 if version == "diff":
                     hourList.append(fline[hour+1] - fline[hour])
@@ -63,84 +59,44 @@ def getList(files, version):
     return myList
     
 def getPCA(version):    
-    #fileList = ["ConjugationA1.txt","ConjugationA2.txt", "StarvationA1.txt","StarvationA2.txt","StarvationA3.txt", "GrowthA1.txt", "GrowthA2.txt","Gro
-wthA3.txt"]
-    #fileList = ["GrowthA1.txt","GrowthA2.txt","GrowthA3.txt"]
-    fileList = ["CombinedStarvationT.txt","CombinedConjugationT.txt"]
-    conjList =[]
-    starvList = []
-    growthList = []
-    comboStarvList = []
-    comboConjList = []
-    for files in fileList:
-        print files
+    fileList = ["ConjugationA1.txt","ConjugationA2.txt", "StarvationA1.txt","StarvationA2.txt","StarvationA3.txt", "GrowthA1.txt", "GrowthA2.txt","GrowthA3.txt"]
+    conjList =[] #list of eigenvectors for conjugation
+    starvList = []# for starvation data
+    growthList = [] #for growth data
+    for files in fileList: # get eigenvector for each data file
         eigenvector = []
-        myList = getList(files,version)
+        myList = getList(files,version) #get data for PCA analysis
         data = np.array(myList)
-        #autoResults = PCA(data)
-        #print autoResults.Wt, "results"
-        mu = data.mean(axis=0) #other option
-        data = data - mu #other option
-# data = (data - mu)/data.std(axis=0)  # Uncomment this reproduces mlab.PCA results
-        eigvec, eigval, V = np.linalg.svd(data.T, full_matrices=False) #other option
-#        print eigvec, "eigvec"
-#        data = data.transpose()  #trying THIS OUT
-        #print data, "before"
-        #data -= np.mean(data, axis=0)  #PUT BACK
-        #print data
-        #c = np.cov(data.transpose()) #put BACK
-        #print c
-        #print "covariance matrix"
-#        c = np.cov(data,None,0)
-#        print data.transpose(), "transposed"
-#        print data, "not transposed"
-
-#        print c, "covariance"
-#        np.savetxt("covariance"+files,c,'%.14f')
-        #eigval, eigvec = np.linalg.eig(c) #PUT BACK!!
+        data -= np.mean(data, axis=0)
+        c = np.cov(data.transpose())
+        eigval, eigvec = np.linalg.eig(c) # create eigenvectors
         print len(eigvec), "len of eigenvector"
         print eigvec, "eigvec"
 
-        eig_pairs = [(np.abs(eigval[i]), eigvec[:,i]) for i in range(len(eigval))] #PUT BACK
+        eig_pairs = [(np.abs(eigval[i]), eigvec[:,i]) for i in range(len(eigval))] #pair eigenvectors with there values
 
-#        print eig_pairs
-        eig_pairs.sort() #PUT BACK
-        eig_pairs.reverse() #PUT BACK
+        eig_pairs.sort() #order the eigenvectors from most variablility to least
+        eig_pairs.reverse()
         
-#        print files
-        #for i in range(len(eigvec)):
-            #print eigvec[i], "eigvec", i
-#            print eigval[i], "eigval", i
-            #eigenvector = eigvec[i].tolist()
-        for i in eig_pairs: #PUT BACK
-            eigenvector = i[1].tolist() #PUT BACK
-            print(i[1]), "eig vec" #PUT BACK
-            #print eigenvector, "list form"
+        for i in eig_pairs: #put eigenvectors in lists to return
+            eigenvector = i[1].tolist()
+            print(i[1]), "eig vec"
             if files[:-6] == "Conjugation":
                 conjList.append(eigenvector)
             elif files[:-6] == "Starvation":
                 starvList.append(eigenvector)
             elif files[:-6] == "Growth":
                 growthList.append(eigenvector)
-            elif files[:-5] == "CombinedStarvation": #-5 FOR transpose, -4 otherwise
-                comboStarvList.append(eigenvector)
-            elif files[:-5] == "CombinedConjugation": #-5 FOR transpose, -4 otherwise
-                comboConjList.append(eigenvector)
 
-    return conjList, starvList, growthList, comboStarvList, comboConjList
+    return conjList, starvList, growthList
 
 def main():
-#    fileList = ["ConjugationA1.txt","ConjugationA2.txt", "StarvationA1.txt","StarvationA2.txt","StarvationA3.txt"]
-
-#    for files in fileList:
-#        print files
-#        myList = getList(files,"raw")
+    #versions are the different types of PCA analysis done
     versions = ["raw","rawPerc","rawPercLog","diff","diffPerc","diffPercLog", "rawLog","diffLog"]
     for version in versions:
-        conjList, starvList, growthList, comboStarvList, comboConjList = getPCA(version)
-#        print starvList, "starvation"
+        conjList, starvList, growthList = getPCA(version) #do PCA of each file for each version
 
-        for x in range(len(conjList)/2):
+        for x in range(len(conjList)/2): #put conjugation data into a table
             f = open("conjugationPCA"+version+str(x+1)+".txt",'w')
             f.write("rep1,rep2")
             for j in range(len(conjList[x])):
@@ -152,7 +108,7 @@ def main():
                     print conjList[x][j], "conj1", conjList[x+10][j], "conj2"
             print "NEXT PCA"
 
-        for z in range(len(starvList)/3):
+        for z in range(len(starvList)/3): #put starvation data into a table
             re = open("starvationPCA"+version+str(z+1)+".txt",'w')
             re.write("rep1,rep2,rep3")
             for y in range(len(starvList[z])):
@@ -164,7 +120,7 @@ def main():
                     print starvList[z][y], "starv1", starvList[z+7][y], "starv2", starvList[z+14][y], "starv3"
             print "NEXT PCA STARVATION"
 
-        for w in range(len(growthList)/3):
+        for w in range(len(growthList)/3): #put growth data into a table
             re = open("growthPCA"+version+str(w+1)+".txt",'w')
             re.write("rep1,rep2,rep3")
             for v in range(len(growthList[w])):
@@ -176,22 +132,6 @@ def main():
                     print growthList[w][v], "growthv1",growthList[w+3][v],"growthv2",growthList[w+6][v],"growthv3"
             print "NEXT PCA GROWTH"
 
-#        for a in range(len(comboStarvList)):
-        for a in range(0,2): #I only want 2 PCs
-            re = open("comboStarvPCA"+version+str(a+1)+".txt",'w')
-            re.write("rep1")
-            for b in range(len(comboStarvList[a])):
-                re.write("\n"+str(comboStarvList[a][b]))
-#                print comboStarvList[a][b], "comboStarv"
-#            print "NEXT PCA comboStarv"
-        
-#        for c in range(len(comboConjList)):
-        for c in range(0,2): #I only want 2 PCs
-            re = open("comboConjPCA" + version+str(c+1)+".txt",'w')
-            re.write("rep1")
-            for d in range(len(comboConjList[c])):
-                re.write("\n"+str(comboConjList[c][d]))
-#                print comboConjList[c][d], "comboConj"
-#            print "NEXT PCA comboConj"
+
 if __name__ == "__main__":
     main()
